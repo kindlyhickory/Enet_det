@@ -10,28 +10,28 @@ from keras.utils import Sequence
 from matplotlib import pyplot as plt
 
 
-def strong_aug(p=0.75):
-    return Compose([
-        ShiftScaleRotate(scale_limit=0.1, rotate_limit=90),
-        Transpose(),
-        # IAAAffine(shear=0.1),
-        # IAAPerspective(),
-        Cutout(num_holes=20, max_h_size=8, max_w_size=8),
-        HorizontalFlip(),
-        VerticalFlip(),
-        GaussNoise(),
-        JpegCompression(),
-        # RandomShadow(shadow_roi=(0, 0, 1, 1), p=0.75),
-        OneOf([
-            MotionBlur(),
-            GaussianBlur()
-        ]),
-        OneOf([
-            ToGray(),
-            ToSepia()
-        ]),
-        RandomBrightnessContrast(brightness_limit=0.75, p=0.75)
-    ], bbox_params=BboxParams("pascal_voc", label_fields=["category_id"], min_area=0.0, min_visibility=0.5), p=p)
+# def strong_aug(p=0.75):
+#     return Compose([
+#         ShiftScaleRotate(scale_limit=0.1, rotate_limit=90),
+#         Transpose(),
+#         # IAAAffine(shear=0.1),
+#         # IAAPerspective(),
+#         Cutout(num_holes=20, max_h_size=8, max_w_size=8),
+#         HorizontalFlip(),
+#         VerticalFlip(),
+#         GaussNoise(),
+#         JpegCompression(),
+#         # RandomShadow(shadow_roi=(0, 0, 1, 1), p=0.75),
+#         OneOf([
+#             MotionBlur(),
+#             GaussianBlur()
+#         ]),
+#         OneOf([
+#             ToGray(),
+#             ToSepia()
+#         ]),
+#         RandomBrightnessContrast(brightness_limit=0.75, p=0.75)
+#     ], bbox_params=BboxParams("pascal_voc", label_fields=["category_id"], min_area=0.0, min_visibility=0.5), p=p)
 
 
 class CSVGenerator(Sequence):
@@ -51,7 +51,7 @@ class CSVGenerator(Sequence):
         self.clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
         self.classes = {}
-        self.num_classes = 0
+        self.num_classes = 1
 
         with open(self.annotations_path, 'r') as f:
             csv_reader = csv.reader(f)
@@ -218,7 +218,7 @@ if __name__ == '__main__':
                        None)
     for i in range(2583):
         imgs, centers = gen.__getitem__(i)
-        plt.imshow(centers[0, :, :, 3])
+        plt.imshow(centers[0, :, :, 2])
         plt.show()
-        print(np.sum(centers[0, :, :, 3]))
-        print(np.count_nonzero(centers[0, :, :, 3]))
+        print(np.sum(centers[0, :, :, 2]))
+        print(np.count_nonzero(centers[0, :, :, 2]))
