@@ -6,7 +6,7 @@ from albumentations import (ToGray, OneOf, Compose, RandomBrightnessContrast,
                             RandomGamma, GaussianBlur, MotionBlur, ToSepia, InvertImg, RandomSnow, RandomSunFlare,
                             RandomRain, RandomShadow, HueSaturationValue, HorizontalFlip)
 from albumentations import BboxParams, ShiftScaleRotate, Transpose, Cutout, VerticalFlip, GaussNoise, JpegCompression
-from keras.utils import Sequence
+from tensorflow.keras.utils import Sequence
 from matplotlib import pyplot as plt
 
 
@@ -40,15 +40,15 @@ class CSVGenerator(Sequence):
                  img_height,
                  img_width,
                  batch_size,
+                 img_path,
                  augs):
         # self.classes_path = classes_path
         self.annotations_path = annotations_path
         self.annotations = {}
-        self.imgs_list = []
         self.out_height = img_height
         self.out_width = img_width
         self.augs = augs
-        self.clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        self.img_path = img_path
 
         self.classes = {}
         self.num_classes = 1
@@ -85,45 +85,59 @@ class CSVGenerator(Sequence):
                 else:
                     y_max = int(float(row[4]))
 
-                class_id = int(row[5])
+                if row[5] == '':
+                    class_id = 0
+                else:
+                    class_id = int(row[5])
 
                 annotation = [x_min, y_min, x_max, y_max, class_id]
                 self.annotations[row[0]].append(annotation)
 
         self.images_list = list(self.annotations.keys())
+        print(len(self.images_list))
+
 
         self.img_height = img_height
         self.img_width = img_width
         self.batch_size = batch_size
+        print(self.batch_size)
 
     def __len__(self):
-        return int(len(self.imgs_list) / self.batch_size)
+        return int(len(self.images_list) / self.batch_size)
 
     def __getitem__(self, idx):
         batch = self.images_list[idx * self.batch_size: (idx + 1) * self.batch_size]
 
         imgs = np.empty((self.batch_size, self.img_height, self.img_width, 3), dtype=np.float32)
-        batch_centers = np.zeros((self.batch_size, self.out_height, self.out_width, self.num_classes + 2),
+        batch_centers = np.zeros((self.batch_size, self.out_height // 4, self.out_width // 4, self.num_classes + 2),
                                  dtype=np.float32)
 
         for i in range(len(batch)):
-            img = cv2.imread(batch[i], cv2.IMREAD_COLOR)
+            img_path = os.path.join(self.img_path, batch[i])
+            img = cv2.imread(img_path, cv2.IMREAD_COLOR)
             if img is None:
                 print(batch[i])
             annotations = self.annotations[batch[i]].copy()
-
+            new_annotations = []
             if self.augs is not None:
                 boxes = []
                 category_ids = []
 
                 for j in range(len(annotations)):
-                    boxes.append([annotations[j][0], annotations[j][1],
-                                  annotations[j][2], annotations[j][3]])
-                    category_ids.append(annotations[j][4])
+                    if annotations[j][2] - annotations[j][0] !=  0 and annotations[j][3] - annotations[j][1] != 0:
+                        boxes.append([annotations[j][0], annotations[j][1],
+                                      annotations[j][2], annotations[j][3]])
+                        category_ids.append(annotations[j][4])
 
                 data = {'image': img, 'bboxes': boxes, 'category_id': category_ids}
                 augmented = self.augs(**data)
                 img = augmented['image']
+
+            else:
+                for j in range(len(annotations)):
+                    if annotations[j][2] - annotations[j][0] !=  0 and annotations[j][3] - annotations[j][1] != 0:
+                        new_annotations.append([annotations[j][0], annotations[j][1],
+                                                annotations[j][2], annotations[j][3], annotations[j][4]])
 
             # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             # img = self.clahe.apply(img)
@@ -144,13 +158,16 @@ class CSVGenerator(Sequence):
                                         int(np.round(augmented['bboxes'][j][2])),
                                         int(np.round(augmented['bboxes'][j][3])),
                                         augmented['category_id'][j]])
+            else:
+                annotations = new_annotations
 
-            centers = np.zeros((self.out_height, self.out_width, self.num_classes), dtype=np.float32)
-            scales = np.zeros((self.out_height, self.out_width, 2), dtype=np.float32)
+            centers = np.zeros((self.out_height // 4, self.out_width // 4, self.num_classes), dtype=np.float32)
+            scales = np.zeros((self.out_height // 4, self.out_width // 4, 2), dtype=np.float32)
 
             for j, bbox in enumerate(annotations):
+                bbox = [bbox[0] // 4, bbox[1] // 4, bbox[2] // 4, bbox[3] // 4]
                 if (bbox[0] == 0) or (bbox[1] == 0) or (bbox[2] == 0) or (bbox[3] == 0) or (bbox[2] - bbox[0] == 0) or (
-                        bbox[3] - bbox[1] == 0):
+                        bbox[3] - bbox[1] == 0) or (bbox[2] < bbox[0]) or (bbox[3] < bbox[1]):
                     continue
                 center_x = int((bbox[2] + bbox[0]) / 2)
                 if center_x == self.out_width:
@@ -162,11 +179,12 @@ class CSVGenerator(Sequence):
                     center_y = self.out_height - 1
 
                 h = bbox[3] - bbox[1]
-                sc_h = h / 256
+                sc_h = h / 64
+
                 if sc_h > 1.0:
                     sc_h = 1.0
                 w = bbox[2] - bbox[0]
-                sc_w = w / 256
+                sc_w = w / 64
                 if sc_w > 1.0:
                     sc_w = 1.0
 
@@ -215,10 +233,12 @@ if __name__ == '__main__':
                        256,
                        256,
                        1,
+                       'images',
                        None)
-    for i in range(2583):
-        imgs, centers = gen.__getitem__(i)
-        plt.imshow(centers[0, :, :, 2])
-        plt.show()
-        print(np.sum(centers[0, :, :, 2]))
-        print(np.count_nonzero(centers[0, :, :, 2]))
+    print(len(gen))
+    #for i in range(2583):
+        #imgs, centers = gen.__getitem__(i)
+        #plt.imshow(centers[0, :, :, 0])
+        #plt.show()
+        # print(np.sum(centers[0, :, :, 2]))
+        # print(np.count_nonzero(centers[0, :, :, 2]))

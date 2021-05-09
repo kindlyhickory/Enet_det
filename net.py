@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow.keras.backend as K
 from tensorflow.keras.layers import (
     Input, Conv2D, concatenate, MaxPool2D, UpSampling2D,
@@ -8,7 +9,7 @@ from tensorflow.python.keras.models import Model
 
 def ConvBNRelu(filters, kernel_size, strides=(1, 1), dilation=(1, 1)):
     def layer(x):
-        x = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, dilation=dilation, padding='same',
+        x = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, dilation_rate=dilation, padding='same',
                    use_bias=False, kernel_initializer='he_normal')(x)
         x = BatchNormalization()(x)
         x = ReLU()(x)
@@ -55,7 +56,7 @@ def bottleneck_asymmetric(filters, rate):
         conv1 = ConvBNRelu(int(in_filters / rate), (1, 1))(x)
         conv2 = ConvBNRelu(int(in_filters / rate), (1, 5))(conv1)
         conv3 = ConvBNRelu(int(in_filters / rate), (5, 1))(conv2)
-        conv4 = ConvBNRelu(filters, (1, 1))(x)
+        conv4 = ConvBNRelu(filters, (1, 1))(conv3)
 
         out = add([conv4, x])
         return out
@@ -66,7 +67,7 @@ def bottleneck_asymmetric(filters, rate):
 def make_net(input_shape):
     img = Input(shape=input_shape, name='image')
 
-    conv1 = ConvBNRelu(13, (3, 3), (2, 3))(img)
+    conv1 = ConvBNRelu(13, (3, 3), (2, 2))(img)
     pool1 = MaxPool2D((2, 2), (2, 2), padding='same')(img)
     cat1 = concatenate([conv1, pool1])
 
@@ -111,3 +112,7 @@ def make_net(input_shape):
 if __name__ == '__main__':
     net = make_net((256, 256, 3))
     net.summary()
+    test = np.zeros((1000, 256, 256, 3), np.float32)
+
+    net.predict(test, batch_size=1, verbose=1)
+    net.predict(test, batch_size=1, verbose=1)

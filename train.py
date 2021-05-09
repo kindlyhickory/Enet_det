@@ -2,10 +2,10 @@ import numpy as np
 import os
 import argparse
 import cv2
-import keras as keras
+import tensorflow.keras as keras
 import tensorflow as tf
-from keras.optimizers import Adam, Nadam, Adadelta
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.optimizers import Adam, Nadam, Adadelta
+from tensorflow.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from albumentations import (ToGray, OneOf, Compose, RandomBrightnessContrast, JpegCompression, Cutout, GaussNoise,
                             IAAAffine, IAAPerspective,
                             RandomGamma, GaussianBlur, ToSepia, MotionBlur, InvertImg, Transpose, HueSaturationValue,
@@ -14,12 +14,11 @@ from albumentations import (ToGray, OneOf, Compose, RandomBrightnessContrast, Jp
 from albumentations.core import composition
 from albumentations.core.composition import BboxParams
 from det_gen import CSVGenerator
-from enet_det.net import make_net
+from net import make_net
 
 
 def strong_aug(p=0.75):
     return Compose([
-        RandomGridShuffle((2, 2), p=0.75),
         OneOf([
             ShiftScaleRotate(shift_limit=0.125),
             Transpose(),
@@ -75,32 +74,17 @@ def my_loss(y_true, y_pred):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('train_annotations', type=str)
-    parser.add_argument('val_annotations', type=str)
-    parser.add_argument('classes', type=str)
-    parser.add_argument('model_path', type=str)
-    parser.add_argument('--image-height', type=int)
-    parser.add_argument('--image-width', type=int)
-    parser.add_argument('--batch-size', type=int)
-    parser.add_argument('--steps', type=int)
-    parser.add_argument('--epochs', type=int)
-    parser.add_argument('--lr', type=float)
-    parser.add_argument('--alpha-neg', type=float, default=3.0)
-    parser.add_argument('--alpha-pos', type=float, default=3.0)
-    parser.add_argument('--near-center-coef', type=float, default=4.0)
-    parser.add_argument('--negatives-weight', type=float, default=0.25)
-    parser.add_argument('--regression-weight', type=float, default=10.0)
     args = parser.parse_args()
 
-    train_generator = CSVGenerator(args.train_annotations,  # args.classes,
-                                   args.image_height, args.image_width,
-                                   args.batch_size, strong_aug())
-    val_generator = CSVGenerator(args.val_annotations,  # args.classes,
-                                 args.image_height, args.image_width,
-                                 1, None)
+    train_generator = CSVGenerator('annotations.csv',
+                                   256, 256,
+                                   2, 'images', strong_aug())
+    val_generator = CSVGenerator('annotations.csv',
+                                   256, 256,
+                                   1, 'images', None)
 
     callbacks = [
-        ModelCheckpoint(os.path.join(args.model_path, 'enet_val_{epoch}.h5'),
+        ModelCheckpoint(os.path.join('models', 'enet_val_{epoch}.h5'),
                         monitor='val_loss',
                         verbose=1,
                         save_best_only=True,
@@ -114,9 +98,9 @@ if __name__ == '__main__':
     ]
 
     model = make_net((256, 256, 3))
-    model.summary()
+    #model.summary()
 
-    model.compile(Nadam(1e-4), loss=my_loss, metrics=['binary_accuracy', 'mae'])
+    model.compile(Nadam(1e-4), loss='mae', metrics=['binary_accuracy', 'mae'])
 
-    model.fit_generator(train_generator, steps_per_epoch=args.steps, validation_data=val_generator, epochs=args.epochs,
-                        verbose=1, callbacks=callbacks, max_queue_size=64)
+    model.fit(train_generator, validation_data=val_generator, epochs=100,
+                        verbose=1, callbacks=callbacks)
