@@ -104,7 +104,7 @@ def make_net(input_shape):
     bn_41 = bottleneck_reg(64, 4)(bn_UpSampling)
     bn_42 = bottleneck_reg(64, 4)(bn_41)
 
-    out = Conv2D(1, (1, 1), use_bias=False, padding='same', activation='sigmoid')(bn_42)
+    out = Conv2D(3, (1, 1), use_bias=False, padding='same', activation='sigmoid')(bn_42)
 
     return Model(img, out)
 

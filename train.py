@@ -21,8 +21,7 @@ def strong_aug(p=0.75):
     return Compose([
         OneOf([
             ShiftScaleRotate(shift_limit=0.125),
-            Transpose(),
-            RandomRotate90(),
+            #RandomRotate90(),
             VerticalFlip(),
             HorizontalFlip(),
             IAAAffine(shear=0.1)
@@ -77,10 +76,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     train_generator = CSVGenerator('annotations.csv',
-                                   256, 256,
+                                   240, 320,
                                    2, 'images', strong_aug())
     val_generator = CSVGenerator('annotations.csv',
-                                   256, 256,
+                                   240, 320,
                                    1, 'images', None)
 
     callbacks = [
@@ -97,7 +96,7 @@ if __name__ == '__main__':
                           mode='min')
     ]
 
-    model = make_net((256, 256, 3))
+    model = make_net((240, 320, 3))
     #model.summary()
 
     model.compile(Nadam(1e-4), loss='mae', metrics=['binary_accuracy', 'mae'])

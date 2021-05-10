@@ -36,19 +36,17 @@ from matplotlib import pyplot as plt
 
 class CSVGenerator(Sequence):
     def __init__(self, annotations_path,
-                 # classes_path,
                  img_height,
                  img_width,
                  batch_size,
-                 img_path,
+                 img_dir,
                  augs):
-        # self.classes_path = classes_path
         self.annotations_path = annotations_path
         self.annotations = {}
         self.out_height = img_height
         self.out_width = img_width
         self.augs = augs
-        self.img_path = img_path
+        self.img_dir = img_dir
 
         self.classes = {}
         self.num_classes = 1
@@ -64,38 +62,29 @@ class CSVGenerator(Sequence):
                 y_min = -1
                 x_max = -1
                 y_max = -1
+                class_id = -1
 
-                if row[1] == '':
-                    x_min = -1
-                else:
+                if row[1] != '':
                     x_min = int(float(row[1]))
 
-                if row[2] == '':
-                    y_min = -1
-                else:
+                if row[2] != '':
                     y_min = int(float(row[2]))
 
-                if row[3] == '':
-                    x_max = -1
-                else:
+                if row[3] != '':
                     x_max = int(float(row[3]))
 
-                if row[4] == '':
-                    y_max = -1
-                else:
+                if row[4] != '':
                     y_max = int(float(row[4]))
 
-                if row[5] == '':
-                    class_id = 0
-                else:
+                if row[5] != '':
                     class_id = int(row[5])
 
-                annotation = [x_min, y_min, x_max, y_max, class_id]
-                self.annotations[row[0]].append(annotation)
+                if x_min > 0 or y_min > 0 or x_max > 0 or y_max > 0 or class_id > 0:
+                    annotation = [x_min, y_min, x_max, y_max, class_id]
+                    self.annotations[row[0]].append(annotation)
 
         self.images_list = list(self.annotations.keys())
         print(len(self.images_list))
-
 
         self.img_height = img_height
         self.img_width = img_width
@@ -113,7 +102,7 @@ class CSVGenerator(Sequence):
                                  dtype=np.float32)
 
         for i in range(len(batch)):
-            img_path = os.path.join(self.img_path, batch[i])
+            img_path = os.path.join(self.img_dir, batch[i])
             img = cv2.imread(img_path, cv2.IMREAD_COLOR)
             if img is None:
                 print(batch[i])
@@ -132,24 +121,6 @@ class CSVGenerator(Sequence):
                 data = {'image': img, 'bboxes': boxes, 'category_id': category_ids}
                 augmented = self.augs(**data)
                 img = augmented['image']
-
-            else:
-                for j in range(len(annotations)):
-                    if annotations[j][2] - annotations[j][0] !=  0 and annotations[j][3] - annotations[j][1] != 0:
-                        new_annotations.append([annotations[j][0], annotations[j][1],
-                                                annotations[j][2], annotations[j][3], annotations[j][4]])
-
-            # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            # img = self.clahe.apply(img)
-            # img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-            # img = np.reshape(img, (img.shape[0], img.shape[1], 1))
-
-            img = cv2.resize(img, dsize=(self.img_width, self.img_height), interpolation=cv2.INTER_AREA)
-            img = img.astype(np.float32)
-            img /= 255
-            imgs[i] = img
-
-            if self.augs is not None:
                 annotations = []
 
                 for j in range(len(augmented['bboxes'])):
@@ -158,46 +129,46 @@ class CSVGenerator(Sequence):
                                         int(np.round(augmented['bboxes'][j][2])),
                                         int(np.round(augmented['bboxes'][j][3])),
                                         augmented['category_id'][j]])
+
             else:
+                for j in range(len(annotations)):
+                    if annotations[j][2] - annotations[j][0] !=  0 and annotations[j][3] - annotations[j][1] != 0:
+                        new_annotations.append([annotations[j][0], annotations[j][1],
+                                                annotations[j][2], annotations[j][3], annotations[j][4]])
                 annotations = new_annotations
+
+            img = img.astype(np.float32)
+            img /= 255
+            imgs[i] = img                
 
             centers = np.zeros((self.out_height // 4, self.out_width // 4, self.num_classes), dtype=np.float32)
             scales = np.zeros((self.out_height // 4, self.out_width // 4, 2), dtype=np.float32)
 
             for j, bbox in enumerate(annotations):
-                bbox = [bbox[0] // 4, bbox[1] // 4, bbox[2] // 4, bbox[3] // 4]
-                if (bbox[0] == 0) or (bbox[1] == 0) or (bbox[2] == 0) or (bbox[3] == 0) or (bbox[2] - bbox[0] == 0) or (
-                        bbox[3] - bbox[1] == 0) or (bbox[2] < bbox[0]) or (bbox[3] < bbox[1]):
+                if (bbox[0] < 0): 
+                    bbox[0] = 0
+                if (bbox[1] < 0):
+                    bbox[1] = 0 
+                if (bbox[2] >= self.out_width // 4): 
+                    bbox[2] = self.out_width // 4 - 1
+                if (bbox[3] >= self.out_height // 4):
+                    bbox[3] = self.out_height // 4 - 1
+                if  (bbox[2] - bbox[0] == 0) or (bbox[3] - bbox[1] == 0) or (bbox[2] < bbox[0]) or (bbox[3] < bbox[1]):
                     continue
-                center_x = int((bbox[2] + bbox[0]) / 2)
-                if center_x == self.out_width:
-                    center_x -= 1
-
-                center_y = int((bbox[3] + bbox[1]) / 2)
-
-                if center_y >= self.out_height:
-                    center_y = self.out_height - 1
 
                 h = bbox[3] - bbox[1]
-                sc_h = h / 64
-
+                sc_h = h / (self.out_height // 4)
                 if sc_h > 1.0:
                     sc_h = 1.0
+                if sc_h < 0:
+                    sc_h = 0
+                    
                 w = bbox[2] - bbox[0]
-                sc_w = w / 64
+                sc_w = w / (self.out_width // 4)
                 if sc_w > 1.0:
                     sc_w = 1.0
-
-                xmin = int(bbox[0] - 1)
-                xmax = int(bbox[2] - 1)
-                ymin = int(bbox[1] - 1)
-                ymax = int(bbox[3] - 1)
-
-                if ymax >= centers.shape[0]:
-                    ymax = centers.shape[0] - 1
-
-                if xmax >= centers.shape[1]:
-                    xmax = centers.shape[1] - 1
+                if sc_w < 0:
+                    sc_w = 0
 
                 rhmin = -int(h / 2)
                 rhmax = int(h / 2)
@@ -212,10 +183,26 @@ class CSVGenerator(Sequence):
 
                 y, x = np.ogrid[rhmin:rhmax, rwmin:rwmax]
 
-                e = np.exp(-((x * x / (2 * (w / 12.0) * (w / 12.0)) + (y * y / (2 * (h / 12.0) * (h / 12.0))))))
+                e = np.exp(-((x * x / (2 * (w / 4.0) * (w / 4.0)) + (y * y / (2 * (h / 4.0) * (h / 4.0))))))
+
+                xmin = bbox[0]
+                ymin = bbox[1]
+
+                xmax = xmin + e.shape[0]
+                ymax = ymin + e.shape[1]
+
+                center_x = int((xmax + xmin) / 2)
+                center_y = int((ymax + ymin) / 2)
+
+                if xmax >= centers.shape[1] or ymax >= centers.shape[0]:
+                    continue
 
                 tmp = np.zeros_like(centers)
-                tmp[ymin:ymax, xmin:xmax, 0] = e
+                
+                try:
+                    tmp[ymin:ymin + e.shape[0], xmin:xmin + e.shape[1], 0] = e
+                except:
+                    print(xmin)
 
                 centers = np.where(tmp > centers, tmp, centers)
                 centers[int(center_y - 1), int(center_x - 1), 0] = 1.0
@@ -230,15 +217,15 @@ class CSVGenerator(Sequence):
 if __name__ == '__main__':
     gen = CSVGenerator('annotations.csv',
                        # 'class.csv',
-                       256,
-                       256,
+                       240,
+                       320,
                        1,
                        'images',
                        None)
     print(len(gen))
-    #for i in range(2583):
-        #imgs, centers = gen.__getitem__(i)
-        #plt.imshow(centers[0, :, :, 0])
-        #plt.show()
+    for i in range(2583):
+        imgs, centers = gen.__getitem__(i)
+        plt.imshow(centers[0, :, :, 0])
+        plt.show()
         # print(np.sum(centers[0, :, :, 2]))
         # print(np.count_nonzero(centers[0, :, :, 2]))
