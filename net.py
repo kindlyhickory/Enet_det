@@ -110,9 +110,9 @@ def make_net(input_shape):
 
 
 if __name__ == '__main__':
-    net = make_net((256, 256, 3))
+    net = make_net((240, 320, 3))
     net.summary()
-    test = np.zeros((1000, 256, 256, 3), np.float32)
+    test = np.zeros((1000, 240, 320, 3), np.float32)
 
     net.predict(test, batch_size=1, verbose=1)
     net.predict(test, batch_size=1, verbose=1)
