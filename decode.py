@@ -17,31 +17,15 @@ def decode_centers(output, score_threshold=0.4, max_detections=100):
                 filtered_centers.append(center.tolist())
         filtered_centers.sort(key=lambda x: x[1])
 
-        for a in range(len(filtered_centers)):
-            if len(filtered_centers[a] == 0):
-                continue
-
-            for b in range(len(filtered_centers)):
-                if len(filtered_centers[b] == 0):
-                    continue
-
-                dx = abs(filtered_centers[a][1] - filtered_centers[b][1])
-                dy = abs(filtered_centers[a][2] - filtered_centers[b][2])
-                if dx < 10 and dy < 10 and filtered_centers[a] != filtered_centers[b]:
-                    if filtered_centers[a][0] > filtered_centers[b][0]:
-                        filtered_centers[b] = []
-                    else:
-                        filtered_centers[a] = []
-
         batch_centers.append(filtered_centers)
 
     return batch_centers
 
 
-def decode_centers_and_scales(output, score_threshold=0.4, max_detections=100):
-    batch_centers = decode_centers(output[:, :, :], score_threshold, max_detections)
+def decode_centers_and_scales(output, score_threshold, max_detections,):
+    batch_centers = decode_centers(output[:, :, :, :1], score_threshold, max_detections)
 
-    # scales_array = output[:, :, :]
+    scales_array = output[:, :, :, 1:]
 
     batch_detections = []
 
@@ -51,8 +35,8 @@ def decode_centers_and_scales(output, score_threshold=0.4, max_detections=100):
 
         for center in centers:
             if len(center) != 0:
-                detection = center + [output[i, int(center[2]), int(center[1])]]
-                detection = detection + [output[i, int(center[2]), int(center[1])]]
+                detection = center + [scales_array[i, int(center[2]), int(center[1]), 0]]
+                detection = detection + [scales_array[i, int(center[2]), int(center[1]), 1]]
 
                 detections.append(detection)
 

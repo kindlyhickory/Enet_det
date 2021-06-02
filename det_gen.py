@@ -10,30 +10,6 @@ from tensorflow.keras.utils import Sequence
 from matplotlib import pyplot as plt
 
 
-# def strong_aug(p=0.75):
-#     return Compose([
-#         ShiftScaleRotate(scale_limit=0.1, rotate_limit=90),
-#         Transpose(),
-#         # IAAAffine(shear=0.1),
-#         # IAAPerspective(),
-#         Cutout(num_holes=20, max_h_size=8, max_w_size=8),
-#         HorizontalFlip(),
-#         VerticalFlip(),
-#         GaussNoise(),
-#         JpegCompression(),
-#         # RandomShadow(shadow_roi=(0, 0, 1, 1), p=0.75),
-#         OneOf([
-#             MotionBlur(),
-#             GaussianBlur()
-#         ]),
-#         OneOf([
-#             ToGray(),
-#             ToSepia()
-#         ]),
-#         RandomBrightnessContrast(brightness_limit=0.75, p=0.75)
-#     ], bbox_params=BboxParams("pascal_voc", label_fields=["category_id"], min_area=0.0, min_visibility=0.5), p=p)
-
-
 class CSVGenerator(Sequence):
     def __init__(self, annotations_path,
                  img_height,

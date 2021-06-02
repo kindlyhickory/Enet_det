@@ -38,8 +38,23 @@ img = np.reshape(img, (1, img.shape[0], img.shape[1], 3))
 
 output = model.predict(img)
 
-batch_detections = decode_centers_and_scales(output)
+batch_detections = decode_centers_and_scales(output, 0.4, 100)
 
 for detections in batch_detections:
-    for detection in detections:
-        pass
+    for i in range(len(detections)):
+        h = detections[i][-2] * img.shape[0] * 4
+        w = detections[i][-1] * img.shape[1] * 4
+        cx = int(detections[i][1]) * 4
+        cy = int(detections[i][2]) * 4
+        # 4 eto vo skolko raz vihod setki menshe vhoda
+
+        xmin = int(cx - w / 2)
+        ymin = int(cy - h / 2)
+        xmax = int(cx + w / 2)
+        ymax = int(cy + h / 2)
+
+        color = (0, 0, 255)
+
+        cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color, 2, cv2.LINE_AA)
+    cv2.imwrite(os.path.join('', '6.jpg'), img)
+    
