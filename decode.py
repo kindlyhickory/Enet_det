@@ -22,7 +22,7 @@ def decode_centers(output, score_threshold=0.4, max_detections=100):
     return batch_centers
 
 
-def decode_centers_and_scales(output, score_threshold, max_detections,):
+def decode_centers_and_scales(output, score_threshold, max_detections):
     batch_centers = decode_centers(output[:, :, :, :1], score_threshold, max_detections)
 
     scales_array = output[:, :, :, 1:]
@@ -49,12 +49,13 @@ def top_k(array, k):
     scores = np.full((k,), -1.0, dtype=np.float32)
     x = np.full((k,), -1.0, dtype=np.float32)
     y = np.full((k,), -1.0, dtype=np.float32)
+    classes = np.full((k,), -1.0, dtype=np.float32)
 
     tmp = array.flatten()
     for i in range(k):
         idx = tmp.argmax()
         scores[i] = tmp[idx]
-        y[i], x[i] = np.unravel_index(idx, array.shape)
+        y[i], x[i], classes[i] = np.unravel_index(idx, array.shape)
         tmp[idx] = -1.0
 
     top_array = np.stack([scores, x, y], axis=-1)
