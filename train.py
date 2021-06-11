@@ -21,7 +21,7 @@ def strong_aug(p=0.75):
     return Compose([
         OneOf([
             ShiftScaleRotate(shift_limit=0.125),
-            #RandomRotate90(),
+            # RandomRotate90(),
             VerticalFlip(),
             HorizontalFlip(),
             IAAAffine(shear=0.1)
@@ -68,7 +68,8 @@ def my_loss(y_true, y_pred):
     ls = tf.square(sc_t - sc) * pos_mask
     ls = tf.reduce_sum(ls) / N
 
-    return pos_loss + 2 * neg_loss + ls
+    # return pos_loss + 2 * neg_loss + ls
+    return (pos_loss + 10 * neg_loss + ls) / 2
 
 
 if __name__ == '__main__':
@@ -76,11 +77,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     train_generator = CSVGenerator('annotations.csv',
-                                   240, 320,
-                                   2, 'images', strong_aug())
+                                   320, 480,
+                                   2, 'images_2', strong_aug())
     val_generator = CSVGenerator('annotations.csv',
-                                   240, 320,
-                                   1, 'images', None)
+                                 320, 480,
+                                 2, 'images_2', None)
 
     callbacks = [
         ModelCheckpoint(os.path.join('models', 'enet_val_{epoch}.h5'),
@@ -90,16 +91,16 @@ if __name__ == '__main__':
                         save_weights_only=False,
                         mode='min'),
         ReduceLROnPlateau(monitor='val_loss',
-                          factor=0.25,
-                          patience=3,
+                          factor=0.5,
+                          patience=5,
                           verbose=1,
                           mode='min')
     ]
 
-    model = make_net((240, 320, 3))
-    #model.summary()
+    model = make_net((320, 480, 3))
+    # model.summary()
 
     model.compile(Nadam(1e-4), loss='mae', metrics=['binary_accuracy', 'mae'])
 
     model.fit(train_generator, validation_data=val_generator, epochs=100,
-                        verbose=1, callbacks=callbacks)
+              verbose=1, callbacks=callbacks)

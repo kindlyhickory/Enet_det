@@ -25,12 +25,11 @@ model.compile(optimizer=Nadam(), loss=my_loss)
 imgs = list()
 avg_time = 0
 
-# Работаем с одной картинкой
 
 img_path = os.path.join(os.getcwd(), '6.jpg')
 print(img_path)
 img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-img = cv2.resize(img, dsize=(320, 240), interpolation=cv2.INTER_AREA)
+img = cv2.resize(img, dsize=(480, 320), interpolation=cv2.INTER_AREA)
 orig_img = img.copy()
 
 img = img.astype(np.float32)
@@ -44,11 +43,10 @@ batch_detections = decode_centers_and_scales(output, 0.4, 100)
 img_signed = orig_img.copy()
 for detections in batch_detections:
     for i in range(len(detections)):
-        h = detections[i][-2] * orig_img.shape[0] * 4
-        w = detections[i][-1] * orig_img.shape[1] * 4
-        cx = int(detections[i][1]) * 4
-        cy = int(detections[i][2]) * 4
-        # 4 eto vo skolko raz vihod setki menshe vhoda
+        h = detections[i][-2] * orig_img.shape[0]
+        w = detections[i][-1] * orig_img.shape[1]
+        cx = int(detections[i][1])
+        cy = int(detections[i][2])
 
         xmin = int(cx - w / 2)
         ymin = int(cy - h / 2)
