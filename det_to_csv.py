@@ -35,11 +35,13 @@ for dataset in datasets:
         img = cv2.imread(img_path, cv2.IMREAD_COLOR)
         orig_h = img.shape[0]
         orig_w = img.shape[1]
-        scale_h = 60 / orig_h
-        scale_w = 80 / orig_w
+        # scale_h = 60 / orig_h
+        scale_h = 320 / orig_h
+        # scale_w = 80 / orig_w
+        scale_w = 480 / orig_w
 
-        img = cv2.resize(img, (320, 240), interpolation=cv2.INTER_AREA)
-        out_path = os.path.join('images', dataset + img_name)
+        img = cv2.resize(img, (480, 320), interpolation=cv2.INTER_AREA)
+        out_path = os.path.join('images_2', dataset + img_name)
         cv2.imwrite(out_path, img)
 
         check = False
@@ -63,10 +65,14 @@ for dataset in datasets:
                     x_min = 0
                 if y_min < 0:
                     y_min = 0
-                if x_max >= 80:
-                    x_max = 79
-                if y_max >= 60:
-                    y_max = 59
+                # if x_max >= 80:
+                #     x_max = 79
+                # if y_max >= 60:
+                #     y_max = 59
+                if x_max >= 480:
+                    x_max = 479
+                if y_max >= 320:
+                    y_max = 319
 
                 new_row = (dataset+img_name, np.round(x_min), np.round(y_min), np.round(x_max), np.round(y_max), 1)
                 det_annotations.append(new_row)
