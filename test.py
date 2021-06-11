@@ -20,13 +20,13 @@ import time
 from decode import decode_centers_and_scales
 from train import my_loss
 
-model = load_model('./models/enet_val_83.h5', compile=False)
+model = load_model('./models/enet_val_73.h5', compile=False)
 model.compile(optimizer=Nadam(), loss=my_loss)
 imgs = list()
 avg_time = 0
 
 
-img_path = os.path.join(os.getcwd(), '6.jpg')
+img_path = os.path.join(os.getcwd(), '3.jpg')
 print(img_path)
 img = cv2.imread(img_path, cv2.IMREAD_COLOR)
 img = cv2.resize(img, dsize=(480, 320), interpolation=cv2.INTER_AREA)
@@ -56,5 +56,5 @@ for detections in batch_detections:
         color = (0, 0, 255)
 
         cv2.rectangle(img_signed, (xmin, ymin), (xmax, ymax), color, 2, cv2.LINE_AA)
-    cv2.imwrite('/home/user-103/Detection/Enet_det/img_out/6.jpg', img_signed)
+    cv2.imwrite('/home/user-103/Detection/Enet_det/img_out/3.jpg', img_signed)
     
