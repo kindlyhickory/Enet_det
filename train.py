@@ -42,8 +42,8 @@ def strong_aug(p=0.75):
 
 
 def my_loss(y_true, y_pred):
-    hm = y_pred[:, :, :, 0]
-    hm_t = y_true[:, :, :, 0]
+    hm = y_pred[:, :, :, :1]
+    hm_t = y_true[:, :, :, :1]
 
     sc = y_pred[:, :, :, 1:]
 
@@ -78,10 +78,10 @@ if __name__ == '__main__':
 
     train_generator = CSVGenerator('annotations.csv',
                                    320, 480,
-                                   2, 'images_2', strong_aug())
+                                   2, 'images_3', strong_aug())
     val_generator = CSVGenerator('annotations.csv',
                                  320, 480,
-                                 2, 'images_2', None)
+                                 2, 'images_3', None)
 
     callbacks = [
         ModelCheckpoint(os.path.join('models', 'enet_val_{epoch}.h5'),
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     model = make_net((320, 480, 3))
     # model.summary()
 
-    model.compile(Nadam(1e-4), loss='mae', metrics=['binary_accuracy', 'mae'])
+    model.compile(Nadam(1e-4), loss=my_loss, metrics=['binary_accuracy', 'mae'])
 
     model.fit(train_generator, validation_data=val_generator, epochs=100,
               verbose=1, callbacks=callbacks)

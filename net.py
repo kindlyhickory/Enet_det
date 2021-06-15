@@ -104,12 +104,14 @@ def make_net(input_shape):
     bn_41 = bottleneck_reg(64, 4)(bn_UpSampling)
     bn_42 = bottleneck_reg(64, 4)(bn_41)
 
-    bn_UpSampling = ConvBNRelu(16, (3, 3))(bn_42)
-    bn_UpSampling = Conv2DTranspose(16, (3, 3), (2, 2), padding='same', use_bias=False, kernel_initializer='he_normal')(bn_UpSampling)
+    bn_UpSampling = ConvBNRelu(32, (3, 3))(bn_42)
+    bn_UpSampling = Conv2DTranspose(32, (3, 3), (2, 2), padding='same', use_bias=False, kernel_initializer='he_normal')(bn_UpSampling)
     bn_UpSampling = BatchNormalization()(bn_UpSampling)
     bn_UpSampling = ReLU()(bn_UpSampling)
 
-    bn_UpSampling = ConvBNRelu(16, (3, 3))(bn_UpSampling)
+    bn_43 = bottleneck_reg(16, 4)(bn_UpSampling)
+
+    bn_UpSampling = ConvBNRelu(16, (3, 3))(bn_43)
     bn_UpSampling = Conv2DTranspose(16, (3, 3), (2, 2), padding='same', use_bias=False, kernel_initializer='he_normal')(
         bn_UpSampling)
     bn_UpSampling = BatchNormalization()(bn_UpSampling)
