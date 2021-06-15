@@ -20,7 +20,7 @@ import time
 from decode import decode_centers_and_scales
 from train import my_loss
 
-model = load_model('./models/enet_val_73.h5', compile=False)
+model = load_model('./models/enet_val_100.h5', compile=False)
 model.compile(optimizer=Nadam(), loss=my_loss)
 imgs = list()
 avg_time = 0
